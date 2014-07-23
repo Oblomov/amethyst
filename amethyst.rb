@@ -24,9 +24,7 @@ See COPYING for details.
 =begin
 TODO:
 
-* find a way to tell Ruby to print whole numbers without the stupid .0 at the end
 * provide a --round option to round values to a given number of digits
-* provide a --plot-round options to do the same, but just in the plot
 
 =end
 
@@ -39,7 +37,9 @@ module Amethyst
 		if ds.odd?
 			return ar[(ds-1)/2]
 		else
-			return (ar[ds/2] + ar[ds/2-1])/2
+			med_f = (ar[ds/2] + ar[ds/2-1])/2.0
+			med_i = med_f.to_i
+			return med_f == med_i ? med_i : med_f
 		end
 	end
 
@@ -47,6 +47,13 @@ module Amethyst
 		attr_reader :size
 		attr_reader :data
 		attr_reader :comments
+
+		def add_datum(val, comment=nil)
+			vi = val.to_i
+			vf = val.to_f
+			@data << (vi == vf ? vi : vf)
+			@comments << (comment ? comment : val)
+		end
 
 		# Data in a DataSet is composed of values and comments
 		# It can be initialized either from a an array of values (no comments in each)
@@ -61,11 +68,9 @@ module Amethyst
 				@comments = []
 				from.each do |v|
 					if v.respond_to? :first and v.respond_to? :last
-						@data << v.first.to_f
-						@comments << v.last
+						self.add_datum v.first, v.last
 					else
-						@data << v.to_f
-						@comments << v
+						self.add_datum v
 					end
 				end
 				# sort the data, makes finding quantiles easier
@@ -77,6 +82,7 @@ module Amethyst
 			@size = @data.size
 
 			@min = @max = nil
+			@mid = nil
 			@mean = nil
 			@variance = nil
 			@stddev = nil
@@ -101,7 +107,12 @@ module Amethyst
 		end
 
 		def mid
-			return (self.min + self.max)/2
+			if @mid.nil?
+				mid_f = (self.min + self.max)/2.0
+				mid_i = mid_f.to_i
+				@mid = mid_f == mid_i ? mid_i : mid_f
+			end
+			return @mid
 		end
 
 		def range
@@ -109,7 +120,11 @@ module Amethyst
 		end
 
 		def mean
-			@mean = @data.inject(0, :+)/self.size if @mean.nil?
+			if @mean.nil?
+				mean_f = @data.inject(0, :+)/self.size.to_f
+				mean_i = mean_f.to_i
+				@mean = mean_f == mean_i ? mean_i : mean_f
+			end
 			return @mean
 		end
 
@@ -122,7 +137,7 @@ module Amethyst
 		end
 
 		def stddev
-			@stddev = Math.sqrt(self.variance.inject(0, :+)/@data.size) if @stddev.nil?
+			@stddev = Math.sqrt(self.variance.inject(0, :+)/@data.size.to_f) if @stddev.nil?
 			return @stddev
 		end
 
@@ -145,16 +160,19 @@ module Amethyst
 					n, r = ds.divmod 4
 					case r
 					when 1
-						@quartile << (0.25*@data[n-1] + 0.75*@data[n])
-						@quartile << mdn
-						@quartile << (0.75*@data[3*n] + 0.25*@data[3*n+1])
+						q1_f = (@data[n-1] + 3*@data[n])/4.0
+						q3_f = (3*@data[3*n] + @data[3*n+1])/4.0
 					when 3
-						@quartile << (0.75*@data[n] + 0.25*@data[n+1])
-						@quartile << mdn
-						@quartile << (0.25*@data[3*n+1] + 0.75*@data[3*n+2])
+						q1_f = (3*@data[n] + @data[n+1])/4.0
+						q3_f = (@data[3*n+1] + 3*@data[3*n+2])/4.0
 					else
 						raise "this can't happen"
 					end
+					q1_i = q1_f.to_i
+					q3_i = q3_f.to_i
+					@quartile << (q1_f == q1_i ? q1_i : q1_f)
+					@quartile << mdn
+					@quartile << (q3_f == q3_i ? q3_i : q3_f)
 				end
 			end
 			return @quartile
