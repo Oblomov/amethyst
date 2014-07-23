@@ -301,6 +301,8 @@ set xrange [#{data.min*0.9}:#{data.max*1.1}]
 set ytics nomirror
 END
 
+puts "set xtics format \"%.2s%c\"" if data.min.abs*1000 < 1 or data.max.abs/1000 > 1
+
 bins = (data.range / data.binwidth).round
 tics = bins
 tics/= 2 while tics > 10
