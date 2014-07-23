@@ -21,6 +21,15 @@ Licensed under the GNU Lesser General Public License, version 2.1
 See COPYING for details.
 =end
 
+=begin
+TODO:
+
+* find a way to tell Ruby to print whole numbers without the stupid .0 at the end
+* provide a --round option to round values to a given number of digits
+* provide a --plot-round options to do the same, but just in the plot
+
+=end
+
 module Amethyst
 	VERSION=1.0
 
