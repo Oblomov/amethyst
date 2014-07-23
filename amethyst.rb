@@ -293,18 +293,23 @@ set bmargin at screen 0.25
 set tmargin at screen 0.95
 END
 
+# common to both plots, regardless of the other
+puts <<END
+unset key
+set xrange [#{data.min*0.9}:#{data.max*1.1}]
+
+set ytics nomirror
+END
+
 bins = (data.range / data.binwidth).round
 tics = bins
 tics/= 2 while tics > 10
 
 
 puts <<END if want_histogram
-unset key
 set border 3
-set yrange [*:*]
-set xrange [#{data.min*0.9}:#{data.max*1.1}]
 
-set ytics nomirror
+set yrange [*:*]
 set xtics nomirror
 set xtics #{data.min + data.binwidth/2}, #{(bins/tics)*data.binwidth}
 
@@ -354,7 +359,6 @@ END
 puts <<END
 # outlier cut-offs: #{outlier_minmin} #{outlier_min} #{outlier_max} #{outlier_maxmax}
 
-unset key
 set border #{multiplot ? 2 : 1 }
 
 unset ytics
