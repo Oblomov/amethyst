@@ -293,6 +293,11 @@ set bmargin at screen 0.25
 set tmargin at screen 0.95
 END
 
+bins = (data.range / data.binwidth).round
+tics = bins
+tics/= 2 while tics > 10
+
+
 puts <<END if want_histogram
 unset key
 set border 3
@@ -301,7 +306,7 @@ set xrange [#{data.min*0.9}:#{data.max*1.1}]
 
 set ytics nomirror
 set xtics nomirror
-set xtics #{data.min + data.binwidth/2}, #{data.binwidth}
+set xtics #{data.min + data.binwidth/2}, #{(bins/tics)*data.binwidth}
 
 set style data boxes
 set boxwidth #{data.binwidth}
