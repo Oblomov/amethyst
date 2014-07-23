@@ -25,6 +25,7 @@ See COPYING for details.
 TODO:
 
 * provide a --round option to round values to a given number of digits
+* improve from, to and step for outliers in boxplot
 
 =end
 
@@ -337,14 +338,29 @@ far_out = []
 # close outliers
 close_out = []
 
+# outliers <
+pre_out = []
+# outliers >
+post_out = []
+
 # min/max for box plot
 box_min = nil
 box_max = nil
 data.data.each do |v|
 	if v < outlier_minmin or v > outlier_maxmax
 		far_out << v
+		if v < outlier_minmin
+			pre_out << v
+		else
+			post_out << v
+		end
 	elsif v < outlier_min or v > outlier_max
 		close_out << v
+		if v < outlier_min
+			pre_out << v
+		else
+			post_out << v
+		end
 	elsif box_min.nil?
 		box_min = v
 		box_max = v
@@ -356,7 +372,48 @@ end
 puts <<END if multiplot
 set bmargin at screen 0.05
 set tmargin at screen 0.25
+unset xtics
 END
+
+# boxplot-specific settings if we are the only plot
+puts <<END unless multiplot
+set xtics nomirror
+set xtics (#{box_min}, #{box_max})
+set xtics add (#{data.quartile.join(', ')})
+END
+
+# if there are only a few outliers, tic them
+# otherwise manually define ranges to add
+
+# range of the pre- and post- outliers
+pre_w = box_min - data.min
+post_w = data.max - box_max
+
+# percent of tics allowed
+pre_pct = pre_w*10/data.range
+post_pct = post_w*10/data.range
+
+if pre_out.size > 0
+	if pre_pct >= pre_out.size
+		puts "set xtics add (#{pre_out.join(', ')})"
+	else
+		from = pre_out.min
+		to = pre_out.max
+		step = (to - from)/pre_pct
+		puts "set xtics add #{from},#{step},#{to}"
+	end
+end
+
+if post_out.size > 0
+	if post_pct >= post_out.size and post_out.size > 0
+		puts "set xtics add (#{post_out.join(', ')})"
+	else
+		from = post_out.min
+		to = post_out.max
+		step = (to - from)/post_pct
+		puts "set xtics add #{from},#{step},#{to}"
+	end
+end
 
 puts <<END
 # outlier cut-offs: #{outlier_minmin} #{outlier_min} #{outlier_max} #{outlier_maxmax}
@@ -364,8 +421,7 @@ puts <<END
 set border #{multiplot ? 2 : 1 }
 
 unset ytics
-#{multiplot ? "unset xtics" : "set xtics nomirror"}
-set yrange [-1:1.5]
+set yrange #{multiplot ? "[-1:1.5]" : "[-1:1]"}
 
 set style data boxxyerrorbars
 
