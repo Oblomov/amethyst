@@ -24,6 +24,7 @@ See COPYING for details.
 =begin
 TODO:
 
+* provide an --inline option to read multiple values per line (assume no comments)
 * provide a --round option to round values to a given number of digits
 * improve from, to and step for outliers in boxplot
 
