@@ -265,6 +265,7 @@ want_plot = (want_histogram || want_boxplot)
 multiplot = (want_histogram && want_boxplot)
 
 puts <<END
+# count: #{data.size}
 # min: #{data.min}
 # max: #{data.max}
 # mid: #{data.mid}
