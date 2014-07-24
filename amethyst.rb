@@ -372,50 +372,56 @@ data.data.each do |v|
 	end
 end
 
-puts <<END if multiplot
+if multiplot
+
+	puts <<END
 set bmargin at screen 0.05
 set tmargin at screen 0.25
 unset xtics
 END
 
-# boxplot-specific settings if we are the only plot
-puts <<END unless multiplot
+else
+
+	# boxplot-specific settings if we are the only plot
+	puts <<END
 set xtics nomirror
 set xtics (#{box_min}, #{box_max})
 set xtics add (#{data.quartile.join(', ')})
 END
 
-# if there are only a few outliers, tic them
-# otherwise manually define ranges to add
+	# if there are only a few outliers, tic them
+	# otherwise manually define ranges to add
 
-# range of the pre- and post- outliers
-pre_w = box_min - data.min
-post_w = data.max - box_max
+	# range of the pre- and post- outliers
+	pre_w = box_min - data.min
+	post_w = data.max - box_max
 
-# percent of tics allowed
-pre_pct = pre_w*10/data.range
-post_pct = post_w*10/data.range
+	# percent of tics allowed
+	pre_pct = pre_w*10/data.range
+	post_pct = post_w*10/data.range
 
-if pre_out.size > 0
-	if pre_pct >= pre_out.size
-		puts "set xtics add (#{pre_out.join(', ')})"
-	else
-		from = pre_out.min
-		to = pre_out.max
-		step = (to - from)/pre_pct
-		puts "set xtics add #{from},#{step},#{to}"
+	if pre_out.size > 0
+		if pre_pct >= pre_out.size
+			puts "set xtics add (#{pre_out.join(', ')})"
+		else
+			from = pre_out.min
+			to = pre_out.max
+			step = (to - from)/pre_pct
+			puts "set xtics add #{from},#{step},#{to}"
+		end
 	end
-end
 
-if post_out.size > 0
-	if post_pct >= post_out.size and post_out.size > 0
-		puts "set xtics add (#{post_out.join(', ')})"
-	else
-		from = post_out.min
-		to = post_out.max
-		step = (to - from)/post_pct
-		puts "set xtics add #{from},#{step},#{to}"
+	if post_out.size > 0
+		if post_pct >= post_out.size and post_out.size > 0
+			puts "set xtics add (#{post_out.join(', ')})"
+		else
+			from = post_out.min
+			to = post_out.max
+			step = (to - from)/post_pct
+			puts "set xtics add #{from},#{step},#{to}"
+		end
 	end
+
 end
 
 puts <<END
