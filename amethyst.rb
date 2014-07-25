@@ -426,6 +426,16 @@ END
 
 end
 
+boxplot_components = [
+	["'-' using 1:(0) with lines ls 1", [box_min, box_max] ], # line from box_min to box_max
+	["'-' ls 1", ["#{data.median} 0 #{data.quartile.first} #{data.quartile.last} -0.5 0.5"] ], # box from Q1 to Q2
+	["'-' ls 1", [	"#{box_min} 0 #{box_min} #{box_min} -0.5 0.5",
+			"#{data.median} 0 #{data.median} #{data.median} -0.5 0.5",
+			"#{box_max} 0 #{box_max} #{box_max} -0.5 0.5"] ], # lines at box_min, median and box_max
+	["'-' using 1:(0) with points ls 1 pt 7 ps 1", close_out ], # close outliers
+	["'-' using 1:(0) with points ls 1 pt 7 ps 2", far_out ] # far outliers
+].delete_if { |bc| bc.last.empty? }
+
 puts <<END
 # outlier cut-offs: #{outlier_minmin} #{outlier_min} #{outlier_max} #{outlier_maxmax}
 
@@ -438,28 +448,8 @@ set style data boxxyerrorbars
 
 set bars 0
 
-# line
-# box
-# whiskers and median bars
-# close outliers
-# far outliers
-plot '-' using 1:(0) with lines ls 1, \\
-     '-' ls 1, \\
-     '-' ls 1, \\
-     '-' using 1:(0) with points ls 1 pt 7 ps 1, \\
-     '-' using 1:(0) with points ls 1 pt 7 ps 2
-#{box_min}
-#{box_max}
-e
-#{data.median} 0 #{data.quartile.first} #{data.quartile.last} -0.5 0.5
-e
-#{box_min} 0 #{box_min} #{box_min} -0.5 0.5
-#{data.median} 0 #{data.median} #{data.median} -0.5 0.5
-#{box_max} 0 #{box_max} #{box_max} -0.5 0.5
-e
-#{close_out.join("\n")}
-e
-#{far_out.join("\n")}
+plot	#{boxplot_components.map { |bc| bc.first }.join(", \\\n\t")}
+#{boxplot_components.map { |bc| bc.last.join("\n") }.join("\ne\n")}
 e
 END
 
