@@ -26,8 +26,6 @@ TODO:
 
 * provide an --inline option to read multiple values per line (assume no comments)
 * provide a --round option to round values to a given number of digits
-* provide a --term option to set the gnuplot terminal type and options
-* --term should imply -p
 * improve from, to and step for outliers in boxplot
 
 =end
@@ -245,7 +243,8 @@ if ARGV.include? '--help'
 	puts "options:"
 	puts "    --[no-]histogram    enable/disable gnuplot histogram"
 	puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
-	puts "    --dumb              set gnuplot terminal to dumb"
+	puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
+	puts "    --term <spec>       set gnuplot terminal to the given <spec>"
 	puts "    --plot, -p          call gnuplot ourselves"
 	exit
 end
@@ -254,14 +253,36 @@ data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2
 
 raise "no values" if data.size == 1
 
+# look for the _last_ occurrence of --term and --dumb
+is_dumb = ARGV.rindex('--dumb')
+has_term = ARGV.rindex('--term')
+
+# gobble the --term specification, if any
+if has_term
+	gnuplot_term = ARGV[has_term+1]
+end
+
+# if both a --dumb and --term spec were used, the second wins
+if is_dumb and has_term
+	if has_term > is_dumb
+		is_dumb = nil
+	else
+		has_term = nil
+	end
+end
+
+# in the end, we're going to use a dumb terminal
+if is_dumb
+	gnuplot_term = "dumb size #{`tput cols`.chomp} #{`tput lines`.chomp}"
+end
+
+
 # pipe to gnuplot ourselves for --plot or -p, unless stdout has already been redirected
 if !$stdout.tty?
 	call_gnuplot = false
 else
-	if ARGV.include?('--dumb')
-		# --dumb assumes that we want to call gnuplot
-		call_gnuplot = "gnuplot"
-	elsif ARGV.include?('--plot') or ARGV.include?('-p')
+	# if a specific term or --plot or -p were given, call gnuplot
+	if gnuplot_term or ARGV.include?('--plot') or ARGV.include?('-p')
 		call_gnuplot = "gnuplot -p"
 	end
 end
@@ -305,7 +326,7 @@ END
 exit unless want_plot
 
 # set gnuplot terminal to dumb, filling the screen, if --dumb is specified on the command line
-puts "set term dumb size #{`tput cols`.chomp} #{`tput lines`.chomp}" if ARGV.include?('--dumb')
+puts "set term #{gnuplot_term}" if gnuplot_term
 
 puts <<END if multiplot
 set multiplot layout 2, 1
