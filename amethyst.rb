@@ -26,9 +26,8 @@ TODO:
 
 * provide an --inline option to read multiple values per line (assume no comments)
 * provide a --round option to round values to a given number of digits
-* provide a -p option to automatically call gnuplot
 * provide a --term option to set the gnuplot terminal type and options
-* --dumb and --term should (mutually exclusive) should imply -p
+* --dumb and --term (mutually exclusive) should imply -p
 * improve from, to and step for outliers in boxplot
 
 =end
@@ -247,6 +246,7 @@ if ARGV.include? '--help'
 	puts "    --[no-]histogram    enable/disable gnuplot histogram"
 	puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
 	puts "    --dumb              set gnuplot terminal to dumb"
+	puts "    --plot, -p          call gnuplot ourselves"
 	exit
 end
 
@@ -254,16 +254,21 @@ data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2
 
 raise "no values" if data.size == 1
 
+# pipe to gnuplot ourselves for --plot or -p, unless stdout has already been redirected
+if $stdout.tty?
+	$stdout.reopen(open("| gnuplot -p", "w")) if ARGV.include?('--plot') or ARGV.include?('-p')
+end
+
 # we will produce gnuplot instructions to plot histograms/boxplots if STDOUT is not a tty
 # override with --[no-]{histogram,boxplot}
 want_histogram = false if ARGV.include?('--no-histogram')
 want_histogram = true if ARGV.include?('--histogram')
-want_histogram = !STDOUT.tty? if want_histogram.nil?
+want_histogram = !$stdout.tty? if want_histogram.nil?
 
 #  boxplot of the data
 want_boxplot = false if ARGV.include?('--no-boxplot')
 want_boxplot = true if ARGV.include?('--boxplot')
-want_boxplot = !STDOUT.tty? if want_boxplot.nil?
+want_boxplot = !$stdout.tty? if want_boxplot.nil?
 
 want_plot = (want_histogram || want_boxplot)
 multiplot = (want_histogram && want_boxplot)
