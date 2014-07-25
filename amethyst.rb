@@ -27,7 +27,7 @@ TODO:
 * provide an --inline option to read multiple values per line (assume no comments)
 * provide a --round option to round values to a given number of digits
 * provide a --term option to set the gnuplot terminal type and options
-* --dumb and --term (mutually exclusive) should imply -p
+* --term should imply -p
 * improve from, to and step for outliers in boxplot
 
 =end
@@ -255,8 +255,20 @@ data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2
 raise "no values" if data.size == 1
 
 # pipe to gnuplot ourselves for --plot or -p, unless stdout has already been redirected
-if $stdout.tty?
-	$stdout.reopen(open("| gnuplot -p", "w")) if ARGV.include?('--plot') or ARGV.include?('-p')
+if !$stdout.tty?
+	call_gnuplot = false
+else
+	if ARGV.include?('--dumb')
+		# --dumb assumes that we want to call gnuplot
+		call_gnuplot = "gnuplot"
+	elsif ARGV.include?('--plot') or ARGV.include?('-p')
+		call_gnuplot = "gnuplot -p"
+	end
+end
+
+if call_gnuplot
+	gnuplot = IO.popen(call_gnuplot, "w")
+	$stdout.reopen(gnuplot)
 end
 
 # we will produce gnuplot instructions to plot histograms/boxplots if STDOUT is not a tty
@@ -457,4 +469,10 @@ plot	#{boxplot_components.map { |bc| bc.first }.join(", \\\n\t")}
 #{boxplot_components.map { |bc| bc.last.join("\n") }.join("\ne\n")}
 e
 END
+
+if call_gnuplot
+	puts "quit"
+	$stdout.close
+	gnuplot.close
+end
 
