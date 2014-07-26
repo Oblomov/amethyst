@@ -33,7 +33,7 @@ TODO:
 module Amethyst
 	VERSION=1.0
 
-	# find the median of an array of data
+	# find the median of an array of sorted data
 	def self.median(ar)
 		ds = ar.size
 		if ds.odd?
@@ -50,6 +50,7 @@ module Amethyst
 		attr_reader :data
 		attr_reader :comments
 
+		# add single datum w/ comment
 		def add_datum(val, comment=nil)
 			vi = val.to_i
 			vf = val.to_f
@@ -57,10 +58,32 @@ module Amethyst
 			@comments << (comment ? comment : val)
 		end
 
+		def invalidate
+			@size = @data.size
+
+			@min = @max = nil
+			@mid = nil
+			@mean = nil
+			@variance = nil
+			@stddev = nil
+			@median = nil
+			@quartile.clear
+			@iqr = nil
+			@mode.clear
+			@binwidth = nil
+			@histogram.clear
+		end
+
 		# Data in a DataSet is composed of values and comments
 		# It can be initialized either from a an array of values (no comments in each)
 		# or from an array of pairs (copied to the internal data) or from another dataset
 		def initialize(from=nil)
+
+			# set these here, invalidate will only clean them up
+			@quartile = []
+			@mode = []
+			@histogram = []
+
 			case from
 			when DataSet
 				@data = from.data.clone
@@ -81,19 +104,8 @@ module Amethyst
 				raise TypeError, "cannot generate a #{self.class} from a #{from.class}"
 			end
 
-			@size = @data.size
+			self.invalidate
 
-			@min = @max = nil
-			@mid = nil
-			@mean = nil
-			@variance = nil
-			@stddev = nil
-			@median = nil
-			@quartile = []
-			@iqr = nil
-			@mode = []
-			@binwidth = nil
-			@histogram = []
 		end
 
 		# TODO <<
@@ -180,6 +192,7 @@ module Amethyst
 			return @quartile
 		end
 
+		# inter-quartile range
 		def iqr
 			if @iqr.nil?
 				qr = self.quartile
@@ -200,6 +213,7 @@ module Amethyst
 			return @mode
 		end
 
+		# width of bins in histogram
 		def binwidth
 			if @binwidth.nil?
 				# Freedman-Diaconis
