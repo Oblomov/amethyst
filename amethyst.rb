@@ -249,78 +249,77 @@ module Amethyst
 	end
 end
 
-exit unless __FILE__ == $0
+if __FILE__ == $0
 
-if ARGV.include? '--help'
-	puts "amethyst #{Amethyst::VERSION} (C) 2014 Giuseppe Bilotta. Licensed under the LGPLv2.1"
-	puts "usage: produce data | amethyst [options] [ | gnuplot -p ]"
-	puts "options:"
-	puts "    --[no-]histogram    enable/disable gnuplot histogram"
-	puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
-	puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
-	puts "    --term <spec>       set gnuplot terminal to the given <spec>"
-	puts "    --plot, -p          call gnuplot ourselves"
-	exit
-end
+	if ARGV.include? '--help'
+		puts "amethyst #{Amethyst::VERSION} (C) 2014 Giuseppe Bilotta. Licensed under the LGPLv2.1"
+		puts "usage: produce data | amethyst [options] [ | gnuplot -p ]"
+		puts "options:"
+		puts "    --[no-]histogram    enable/disable gnuplot histogram"
+		puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
+		puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
+		puts "    --term <spec>       set gnuplot terminal to the given <spec>"
+		puts "    --plot, -p          call gnuplot ourselves"
+		exit
+	end
 
-data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2) })
+	data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2) })
 
-raise "no values" if data.size == 1
+	raise "no values" if data.size == 1
 
-# look for the _last_ occurrence of --term and --dumb
-is_dumb = ARGV.rindex('--dumb')
-has_term = ARGV.rindex('--term')
+	# look for the _last_ occurrence of --term and --dumb
+	is_dumb = ARGV.rindex('--dumb')
+	has_term = ARGV.rindex('--term')
 
-# gobble the --term specification, if any
-if has_term
-	gnuplot_term = ARGV[has_term+1]
-end
+	# gobble the --term specification, if any
+	if has_term
+		gnuplot_term = ARGV[has_term+1]
+	end
 
-# if both a --dumb and --term spec were used, the second wins
-if is_dumb and has_term
-	if has_term > is_dumb
-		is_dumb = nil
+	# if both a --dumb and --term spec were used, the second wins
+	if is_dumb and has_term
+		if has_term > is_dumb
+			is_dumb = nil
+		else
+			has_term = nil
+		end
+	end
+
+	# in the end, we're going to use a dumb terminal
+	if is_dumb
+		gnuplot_term = "dumb size #{`tput cols`.chomp} #{`tput lines`.chomp}"
+	end
+
+	# pipe to gnuplot ourselves for --plot or -p, unless stdout has already been redirected
+	if !$stdout.tty?
+		call_gnuplot = false
 	else
-		has_term = nil
+		# if a specific term or --plot or -p were given, call gnuplot
+		if gnuplot_term or ARGV.include?('--plot') or ARGV.include?('-p')
+			call_gnuplot = "gnuplot -p"
+		end
 	end
-end
 
-# in the end, we're going to use a dumb terminal
-if is_dumb
-	gnuplot_term = "dumb size #{`tput cols`.chomp} #{`tput lines`.chomp}"
-end
-
-
-# pipe to gnuplot ourselves for --plot or -p, unless stdout has already been redirected
-if !$stdout.tty?
-	call_gnuplot = false
-else
-	# if a specific term or --plot or -p were given, call gnuplot
-	if gnuplot_term or ARGV.include?('--plot') or ARGV.include?('-p')
-		call_gnuplot = "gnuplot -p"
+	if call_gnuplot
+		gnuplot = IO.popen(call_gnuplot, "w")
+		$stdout.reopen(gnuplot)
 	end
-end
 
-if call_gnuplot
-	gnuplot = IO.popen(call_gnuplot, "w")
-	$stdout.reopen(gnuplot)
-end
+	# we will produce gnuplot instructions to plot histograms/boxplots if STDOUT is not a tty
+	# override with --[no-]{histogram,boxplot}
+	want_histogram = false if ARGV.include?('--no-histogram')
+	want_histogram = true if ARGV.include?('--histogram')
+	want_histogram = !$stdout.tty? if want_histogram.nil?
 
-# we will produce gnuplot instructions to plot histograms/boxplots if STDOUT is not a tty
-# override with --[no-]{histogram,boxplot}
-want_histogram = false if ARGV.include?('--no-histogram')
-want_histogram = true if ARGV.include?('--histogram')
-want_histogram = !$stdout.tty? if want_histogram.nil?
+	#  boxplot of the data
+	want_boxplot = false if ARGV.include?('--no-boxplot')
+	want_boxplot = true if ARGV.include?('--boxplot')
+	want_boxplot = !$stdout.tty? if want_boxplot.nil?
 
-#  boxplot of the data
-want_boxplot = false if ARGV.include?('--no-boxplot')
-want_boxplot = true if ARGV.include?('--boxplot')
-want_boxplot = !$stdout.tty? if want_boxplot.nil?
+	want_plot = (want_histogram || want_boxplot)
+	multiplot = (want_histogram && want_boxplot)
 
-want_plot = (want_histogram || want_boxplot)
-multiplot = (want_histogram && want_boxplot)
-
-puts <<END
+	puts <<END
 # count: #{data.size}
 # min: #{data.min}
 # max: #{data.max}
@@ -337,12 +336,12 @@ puts <<END
 # IQR: #{data.iqr}
 END
 
-exit unless want_plot
+	exit unless want_plot
 
-# set gnuplot terminal to dumb, filling the screen, if --dumb is specified on the command line
-puts "set term #{gnuplot_term}" if gnuplot_term
+	# set gnuplot terminal to dumb, filling the screen, if --dumb is specified on the command line
+	puts "set term #{gnuplot_term}" if gnuplot_term
 
-puts <<END if multiplot
+	puts <<END if multiplot
 set multiplot layout 2, 1
 
 set lmargin at screen 0.05
@@ -351,22 +350,22 @@ set bmargin at screen 0.25
 set tmargin at screen 0.95
 END
 
-# common to both plots, regardless of the other
-puts <<END
+	# common to both plots, regardless of the other
+	puts <<END
 unset key
 set xrange [#{data.min*0.9}:#{data.max*1.1}]
 
 set ytics nomirror
 END
 
-puts "set xtics format \"%.2s%c\"" if data.min.abs*1000 < 1 or data.max.abs/1000 > 1
+	puts "set xtics format \"%.2s%c\"" if data.min.abs*1000 < 1 or data.max.abs/1000 > 1
 
-bins = (data.range / data.binwidth).round
-tics = bins
-tics/= 2 while tics > 10
+	bins = (data.range / data.binwidth).round
+	tics = bins
+	tics/= 2 while tics > 10
 
 
-puts <<END if want_histogram
+	puts <<END if want_histogram
 set border 3
 
 set yrange [*:*]
@@ -381,114 +380,114 @@ plot '-'
 e
 END
 
-# we're done if we don't want a boxplot
-exit unless want_boxplot
+	# we're done if we don't want a boxplot
+	exit unless want_boxplot
 
-# outlier ranges
-outlier_minmin = data.quartile.first - 3*data.iqr
-outlier_min = data.quartile.first - 1.5*data.iqr
-outlier_max = data.quartile.last + 1.5*data.iqr
-outlier_maxmax = data.quartile.last + 3*data.iqr
+	# outlier ranges
+	outlier_minmin = data.quartile.first - 3*data.iqr
+	outlier_min = data.quartile.first - 1.5*data.iqr
+	outlier_max = data.quartile.last + 1.5*data.iqr
+	outlier_maxmax = data.quartile.last + 3*data.iqr
 
-# far outliers
-far_out = []
-# close outliers
-close_out = []
+	# far outliers
+	far_out = []
+	# close outliers
+	close_out = []
 
-# outliers <
-pre_out = []
-# outliers >
-post_out = []
+	# outliers <
+	pre_out = []
+	# outliers >
+	post_out = []
 
-# min/max for box plot
-box_min = nil
-box_max = nil
-data.data.each do |v|
-	if v < outlier_minmin or v > outlier_maxmax
-		far_out << v
-		if v < outlier_minmin
-			pre_out << v
-		else
-			post_out << v
+	# min/max for box plot
+	box_min = nil
+	box_max = nil
+	data.data.each do |v|
+		if v < outlier_minmin or v > outlier_maxmax
+			far_out << v
+			if v < outlier_minmin
+				pre_out << v
+			else
+				post_out << v
+			end
+		elsif v < outlier_min or v > outlier_max
+			close_out << v
+			if v < outlier_min
+				pre_out << v
+			else
+				post_out << v
+			end
+		elsif box_min.nil?
+			box_min = v
+			box_max = v
+		elsif v > box_max
+			box_max = v
 		end
-	elsif v < outlier_min or v > outlier_max
-		close_out << v
-		if v < outlier_min
-			pre_out << v
-		else
-			post_out << v
-		end
-	elsif box_min.nil?
-		box_min = v
-		box_max = v
-	elsif v > box_max
-		box_max = v
 	end
-end
 
-if multiplot
+	if multiplot
 
-	puts <<END
+		puts <<END
 set bmargin at screen 0.05
 set tmargin at screen 0.25
 unset xtics
 END
 
-else
+	else
 
-	# boxplot-specific settings if we are the only plot
-	puts <<END
+		# boxplot-specific settings if we are the only plot
+		puts <<END
 set xtics nomirror
 set xtics (#{box_min}, #{box_max})
 set xtics add (#{data.quartile.join(', ')})
 END
 
-	# if there are only a few outliers, tic them
-	# otherwise manually define ranges to add
+		# if there are only a few outliers, tic them
+		# otherwise manually define ranges to add
 
-	# range of the pre- and post- outliers
-	pre_w = box_min - data.min
-	post_w = data.max - box_max
+		# range of the pre- and post- outliers
+		pre_w = box_min - data.min
+		post_w = data.max - box_max
 
-	# percent of tics allowed
-	pre_pct = pre_w*10/data.range
-	post_pct = post_w*10/data.range
+		# percent of tics allowed
+		pre_pct = pre_w*10/data.range
+		post_pct = post_w*10/data.range
 
-	if pre_out.size > 0
-		if pre_pct >= pre_out.size
-			puts "set xtics add (#{pre_out.join(', ')})"
-		else
-			from = pre_out.min
-			to = pre_out.max
-			step = (to - from)/pre_pct
-			puts "set xtics add #{from},#{step},#{to}"
+		if pre_out.size > 0
+			if pre_pct >= pre_out.size
+				puts "set xtics add (#{pre_out.join(', ')})"
+			else
+				from = pre_out.min
+				to = pre_out.max
+				step = (to - from)/pre_pct
+				puts "set xtics add #{from},#{step},#{to}"
+			end
 		end
+
+		if post_out.size > 0
+			if post_pct >= post_out.size and post_out.size > 0
+				puts "set xtics add (#{post_out.join(', ')})"
+			else
+				from = post_out.min
+				to = post_out.max
+				step = (to - from)/post_pct
+				puts "set xtics add #{from},#{step},#{to}"
+			end
+		end
+
 	end
 
-	if post_out.size > 0
-		if post_pct >= post_out.size and post_out.size > 0
-			puts "set xtics add (#{post_out.join(', ')})"
-		else
-			from = post_out.min
-			to = post_out.max
-			step = (to - from)/post_pct
-			puts "set xtics add #{from},#{step},#{to}"
-		end
-	end
+	boxplot_components = [
+		["'-' using 1:(0) with lines ls 1", [box_min, box_max] ], # line from box_min to box_max
+		["'-' ls 1", ["#{data.median} 0 #{data.quartile.first} #{data.quartile.last} -0.5 0.5"] ], # box from Q1 to Q2
+		["'-' ls 1", [	"#{box_min} 0 #{box_min} #{box_min} -0.5 0.5",
+								 "#{data.median} 0 #{data.median} #{data.median} -0.5 0.5",
+								 "#{box_max} 0 #{box_max} #{box_max} -0.5 0.5"] ], # lines at box_min, median and box_max
+		["'-' using 1:(0) with points ls 1 pt 7 ps 1", close_out ], # close outliers
+		["'-' using 1:(0) with points ls 1 pt 7 ps 2", far_out ] # far outliers
+	].delete_if { |bc| bc.last.empty? }
 
-end
-
-boxplot_components = [
-	["'-' using 1:(0) with lines ls 1", [box_min, box_max] ], # line from box_min to box_max
-	["'-' ls 1", ["#{data.median} 0 #{data.quartile.first} #{data.quartile.last} -0.5 0.5"] ], # box from Q1 to Q2
-	["'-' ls 1", [	"#{box_min} 0 #{box_min} #{box_min} -0.5 0.5",
-			"#{data.median} 0 #{data.median} #{data.median} -0.5 0.5",
-			"#{box_max} 0 #{box_max} #{box_max} -0.5 0.5"] ], # lines at box_min, median and box_max
-	["'-' using 1:(0) with points ls 1 pt 7 ps 1", close_out ], # close outliers
-	["'-' using 1:(0) with points ls 1 pt 7 ps 2", far_out ] # far outliers
-].delete_if { |bc| bc.last.empty? }
-
-puts <<END
+	puts <<END
 # outlier cut-offs: #{outlier_minmin} #{outlier_min} #{outlier_max} #{outlier_maxmax}
 
 set border #{multiplot ? 2 : 1 }
@@ -505,9 +504,10 @@ plot	#{boxplot_components.map { |bc| bc.first }.join(", \\\n\t")}
 e
 END
 
-if call_gnuplot
-	puts "quit"
-	$stdout.close
-	gnuplot.close
-end
+	if call_gnuplot
+		puts "quit"
+		$stdout.close
+		gnuplot.close
+	end
 
+end
