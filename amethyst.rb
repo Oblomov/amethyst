@@ -378,6 +378,7 @@ set boxwidth #{data.binwidth}
 plot '-'
 #{data.histogram.map { |p| p.join('  ') }.join("\n")}
 e
+
 END
 
 	# we're done if we don't want a boxplot
@@ -502,6 +503,7 @@ set bars 0
 plot	#{boxplot_components.map { |bc| bc.first }.join(", \\\n\t")}
 #{boxplot_components.map { |bc| bc.last.join("\n") }.join("\ne\n")}
 e
+
 END
 
 	if call_gnuplot
