@@ -15,7 +15,7 @@ These can be forced with the --histogram and --boxplot command-line parameters,
 and are automatically enabled if the output is redirected (disable with --no-histogram
 --no-boxplot).
 
-Copyright (C) 2014 Giuseppe Bilotta
+Copyright (C) 2014, 2015 Giuseppe Bilotta
 
 Licensed under the GNU Lesser General Public License, version 2.1
 See COPYING for details.
@@ -160,6 +160,22 @@ module Amethyst
 			return @median
 		end
 
+		# find percentile rank of value
+		def rank(val)
+			# find index of value
+			idx = @data.find_index(val)
+			if idx.nil?
+				# value not find, so find index of last element smaller than value,
+				# (computed as one less than the index of the first element larger than
+				idx = @data.find_index { |cmp| cmp > val }
+				idx = @data.size if idx.nil? # not found, go to the last
+				idx -= 1 # we want the index of the largest element smaller than value!
+			end
+			# 0-based vs 1-based, hence +1 (yes, we're subtracting 1 to add 1 in the previous
+			# conditional block, I know
+			return (idx + 1)*100/@data.size
+		end
+
 		def quartile
 			if @quartile.empty?
 				ds = @data.size
@@ -255,6 +271,7 @@ if __FILE__ == $0
 		puts "amethyst #{Amethyst::VERSION} (C) 2014 Giuseppe Bilotta. Licensed under the LGPLv2.1"
 		puts "usage: produce data | amethyst [options] [ | gnuplot -p ]"
 		puts "options:"
+		puts "    --rank <value>      find percentile rank of value"
 		puts "    --[no-]histogram    enable/disable gnuplot histogram"
 		puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
 		puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
@@ -266,6 +283,11 @@ if __FILE__ == $0
 	data = Amethyst::DataSet.new(STDIN.readlines.map { |v| v.chomp.strip.split($;, 2) })
 
 	raise "no values" if data.size == 1
+
+	want_rank = ARGV.rindex('--rank')
+	if want_rank
+		value_to_rank = ARGV[want_rank+1].to_i
+	end
 
 	# look for the _last_ occurrence of --term and --dumb
 	is_dumb = ARGV.rindex('--dumb')
@@ -335,6 +357,10 @@ if __FILE__ == $0
 # quartiles: #{data.quartile.join(' ')}
 # IQR: #{data.iqr}
 END
+
+	if want_rank
+		puts "# rank for #{value_to_rank}: #{data.rank value_to_rank}%"
+	end
 
 	exit unless want_plot
 
