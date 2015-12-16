@@ -277,6 +277,7 @@ if __FILE__ == $0
 		puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
 		puts "    --term <spec>       set gnuplot terminal to the given <spec>"
 		puts "    --plot, -p          call gnuplot ourselves"
+		puts "    --plot-code <code>  add the given code to the gnuplot commands"
 		exit
 	end
 
@@ -364,8 +365,18 @@ END
 
 	exit unless want_plot
 
+	# indices of --plot-code
+	plot_code_idx = ARGV.each_index.select { |i| ARGV[i] == '--plot-code' }
+	plot_code = plot_code_idx.map { |i| ARGV[i+1] }
+
 	# set gnuplot terminal to dumb, filling the screen, if --dumb is specified on the command line
 	puts "set term #{gnuplot_term}" if gnuplot_term
+
+	unless plot_code.empty?
+		puts "# user-specified plot code"
+		puts plot_code.join("\n")
+		puts "# user-specified plot code END"
+	end
 
 	puts <<END if multiplot
 set multiplot layout 2, 1
