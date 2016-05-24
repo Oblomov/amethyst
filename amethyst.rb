@@ -461,8 +461,12 @@ END
 			box_max = v
 		elsif v > box_max
 			box_max = v
+		elsif v < box_min
+			box_min = v
 		end
 	end
+
+	throw NotImplementedError if box_min.nil?
 
 	if multiplot
 
