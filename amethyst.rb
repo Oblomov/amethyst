@@ -5,7 +5,7 @@ AMETHYST is a Ruby library/script to do some basic statistical analysis
 on series of numbers.
 
 As a Ruby library, it provides an Amethyst::DataSet class which exposes
-a number of methods to corresponding to basic statistical properties of
+a number of methods corresponding to basic statistical properties of
 a dataset.
 
 As a script, it can be used as a filter from the command line to extract
@@ -15,7 +15,7 @@ These can be forced with the --histogram and --boxplot command-line parameters,
 and are automatically enabled if the output is redirected (disable with --no-histogram
 --no-boxplot).
 
-Copyright (C) 2014, 2015 Giuseppe Bilotta
+Copyright (C) 2014-2016 Giuseppe Bilotta
 
 Licensed under the GNU Lesser General Public License, version 2.1
 See COPYING for details.
@@ -75,7 +75,7 @@ module Amethyst
 		end
 
 		# Data in a DataSet is composed of values and comments
-		# It can be initialized either from a an array of values (no comments in each)
+		# It can be initialized either from an array of values (no comments in each)
 		# or from an array of pairs (copied to the internal data) or from another dataset
 		def initialize(from=nil)
 
@@ -268,7 +268,7 @@ end
 if __FILE__ == $0
 
 	if ARGV.include? '--help'
-		puts "amethyst #{Amethyst::VERSION} (C) 2014 Giuseppe Bilotta. Licensed under the LGPLv2.1"
+		puts "amethyst #{Amethyst::VERSION} (C) 2014-2016 Giuseppe Bilotta. Licensed under the LGPLv2.1"
 		puts "usage: produce data | amethyst [options] [ | gnuplot -p ]"
 		puts "options:"
 		puts "    --rank <value>      find percentile rank of value"
