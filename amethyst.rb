@@ -58,6 +58,13 @@ module Amethyst
 			@comments << (comment ? comment : val)
 		end
 
+		# return the value/comment pairs for which the comment matches
+		# a specific pattern
+		def comment_values(pattern)
+			indices = @comments.size.times.select { |i| comments[i].match(pattern) }
+			indices.map { |i| [@data[i], @comments[i]] }
+		end
+
 		def invalidate
 			@size = @data.size
 
@@ -287,7 +294,8 @@ if __FILE__ == $0
 
 	want_rank = ARGV.rindex('--rank')
 	if want_rank
-		value_to_rank = ARGV[want_rank+1].to_i
+		to_rank = ARGV[want_rank+1]
+		values_to_rank = [[Integer(to_rank), nil]] rescue data.comment_values(Regexp.new(to_rank, Regexp::IGNORECASE))
 	end
 
 	# look for the _last_ occurrence of --term and --dumb
@@ -360,7 +368,17 @@ if __FILE__ == $0
 END
 
 	if want_rank
-		puts "# rank for #{value_to_rank}: #{data.rank value_to_rank}%"
+		values_to_rank.each do |pair|
+			value = pair.first
+			comment = pair.last
+			rank = data.rank value
+			if comment and not comment.empty?
+				puts "# rank for #{comment} (#{value}): #{rank}%"
+			else
+				puts "# rank for #{value}: #{rank}%"
+			end
+		end
+		puts "# no values matching #{to_rank}" if values_to_rank.empty?
 	end
 
 	exit unless want_plot
