@@ -172,7 +172,7 @@ module Amethyst
 			# find index of value
 			idx = @data.find_index(val)
 			if idx.nil?
-				# value not find, so find index of last element smaller than value,
+				# value not found, so find index of last element smaller than value,
 				# (computed as one less than the index of the first element larger than
 				idx = @data.find_index { |cmp| cmp > val }
 				idx = @data.size if idx.nil? # not found, go to the last
@@ -236,11 +236,21 @@ module Amethyst
 			return @mode
 		end
 
+		# Freedman-Diaconis
+		def binwidth_fd
+			2*self.iqr/Math.cbrt(@data.size)
+		end
+
+		# Scott
+		def binwidth_scott
+			3.5*self.stddev/Math.cbrt(@data.size)
+		end
+
+
 		# width of bins in histogram
 		def binwidth
 			if @binwidth.nil?
-				# Freedman-Diaconis
-				@binwidth = 2*self.iqr/Math.cbrt(@data.size)
+				@binwidth = binwidth_fd
 			end
 			return @binwidth
 		end
@@ -365,6 +375,13 @@ if __FILE__ == $0
 # median: #{data.median}
 # quartiles: #{data.quartile.join(' ')}
 # IQR: #{data.iqr}
+# outlier fences: #{data.quartile.first - 3*data.iqr/2} #{data.quartile.last + 3*data.iqr/2}
+# Bin widths:
+#   Square root:       #{Math.sqrt(data.size)}
+#   Sturge:            #{Math.log2(data.size).ceil + 1}
+#   Rice:              #{2*Math.cbrt(data.size).ceil}
+#   Scott:             #{data.binwidth_scott}
+#   Freedman-Diaconis: #{data.binwidth_fd}
 END
 
 	if want_rank
