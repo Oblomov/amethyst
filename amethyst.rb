@@ -15,7 +15,7 @@ These can be forced with the --histogram and --boxplot command-line parameters,
 and are automatically enabled if the output is redirected (disable with --no-histogram
 --no-boxplot).
 
-Copyright (C) 2014-2016 Giuseppe Bilotta
+Copyright (C) 2014-2017 Giuseppe Bilotta
 
 Licensed under the GNU Lesser General Public License, version 2.1
 See COPYING for details.
@@ -31,7 +31,7 @@ TODO:
 =end
 
 module Amethyst
-	VERSION=1.0
+	VERSION=1.1
 
 	# find the median of an array of sorted data
 	def self.median(ar)
