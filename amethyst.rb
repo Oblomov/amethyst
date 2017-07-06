@@ -236,33 +236,55 @@ module Amethyst
 			return @mode
 		end
 
-		# Freedman-Diaconis
-		def binwidth_fd
-			2*self.iqr/Math.cbrt(@data.size)
-		end
+		BIN_METHODS = %w/sqrt Sturge Rice Scott Freedman-Diaconis/
 
-		# Scott
-		def binwidth_scott
-			3.5*self.stddev/Math.cbrt(@data.size)
+		## Bin width methods
+		def named_binwidth(name)
+			sname = name.to_s.downcase.sub('-','_').intern;
+			case sname
+			when :sqrt # Square root
+				Math.sqrt(@data.size)
+			when :sturge # Sturge
+				Math.log2(@data.size).ceil + 1
+			when :rice # Rice
+				2*Math.cbrt(@data.size).ceil
+			when :scott # Scott
+				7*self.stddev/(2*Math.cbrt(@data.size))
+			when :fd, :freedman_diaconis
+				2*self.iqr/Math.cbrt(@data.size)
+			else
+				raise ArgumentError.new("unknown bin width method #{name} (#{sname})")
+			end
 		end
-
 
 		# width of bins in histogram
 		def binwidth
 			if @binwidth.nil?
-				@binwidth = binwidth_fd
+				@binwidth = named_binwidth(:fd)
 			end
 			return @binwidth
 		end
 
+		def binwidth=(spec)
+			oldbw = @binwidth
+			case spec
+			when String, Symbol
+				@binwidth = named_binwidth(spec)
+			when Numeric
+				@binwidth = spec
+			else
+				raise ArgumentError.new("unknown bin width specification type #{spec.class.name}")
+			end
+			@histogram.clear if @binwidth != oldbw
+		end
+
 		def histogram(binwidth=nil)
-			if binwidth.nil?
-				binwidth = self.binwidth
+			if not binwidth.nil?
+				# interpret binwidth as a possible string spec
+				self.binwidth = binwidth
 			end
-			if @binwidth != binwidth
-				@binwidth = binwidth
-				@histogram.clear
-			end
+			# set to the actual (interpreted) value
+			binwidth = self.binwidth
 			if @histogram.empty?
 				binrad = binwidth/2
 				cur_bin = self.min + binrad
@@ -290,6 +312,7 @@ if __FILE__ == $0
 		puts "options:"
 		puts "    --rank <value>      find percentile rank of value"
 		puts "    --[no-]histogram    enable/disable gnuplot histogram"
+		puts "    --binwidth <width>  set the bin width by value or by name (supported: #{Amethyst::DataSet::BIN_METHODS.join(' ')})"
 		puts "    --[no-]boxplot      enable/disable gnuplot boxplot"
 		puts "    --dumb              set gnuplot terminal to dumb, filling the console winow"
 		puts "    --term <spec>       set gnuplot terminal to the given <spec>"
@@ -377,12 +400,21 @@ if __FILE__ == $0
 # IQR: #{data.iqr}
 # outlier fences: #{data.quartile.first - 3*data.iqr/2} #{data.quartile.last + 3*data.iqr/2}
 # Bin widths:
-#   Square root:       #{Math.sqrt(data.size)}
-#   Sturge:            #{Math.log2(data.size).ceil + 1}
-#   Rice:              #{2*Math.cbrt(data.size).ceil}
-#   Scott:             #{data.binwidth_scott}
-#   Freedman-Diaconis: #{data.binwidth_fd}
+#   Square root:       #{data.named_binwidth(:sqrt)}
+#   Sturge:            #{data.named_binwidth(:sturge)}
+#   Rice:              #{data.named_binwidth(:rice)}
+#   Scott:             #{data.named_binwidth(:scott)}
+#   Freedman-Diaconis: #{data.named_binwidth(:fd)}
 END
+	binwidth_spec = ARGV.rindex('--binwidth')
+	if binwidth_spec
+		binwidth_spec = ARGV[binwidth_spec+1]
+		# Check if it's a number, use it as such
+		binwidth_spec = Float(binwidth_spec) rescue binwidth_spec
+		puts "# Requested bin width: #{binwidth_spec}"
+		data.binwidth = binwidth_spec
+		puts "# Using bin width: #{data.binwidth}"
+	end
 
 	if want_rank
 		values_to_rank.each do |pair|
